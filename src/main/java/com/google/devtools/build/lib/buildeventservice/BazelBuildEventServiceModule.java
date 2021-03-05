@@ -22,9 +22,14 @@ import com.google.devtools.build.lib.authandtls.AuthAndTLSOptions;
 import com.google.devtools.build.lib.authandtls.GoogleAuthUtils;
 import com.google.devtools.build.lib.buildeventservice.client.BuildEventServiceClient;
 import com.google.devtools.build.lib.buildeventservice.client.BuildEventServiceGrpcClient;
+import com.google.devtools.build.lib.remote.options.RemoteOptions;
+import com.google.devtools.build.lib.remote.util.TracingMetadataUtils;
 import io.grpc.ManagedChannel;
+import io.grpc.ClientInterceptor;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Objects;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -50,7 +55,9 @@ public class BazelBuildEventServiceModule
 
   @Override
   protected BuildEventServiceClient getBesClient(
-      BuildEventServiceOptions besOptions, AuthAndTLSOptions authAndTLSOptions) throws IOException {
+      BuildEventServiceOptions besOptions,
+      AuthAndTLSOptions authAndTLSOptions, 
+      RemoteOptions remoteOptions) throws IOException {
     BackendConfig newConfig =
         new AutoValue_BazelBuildEventServiceModule_BackendConfig(
             besOptions.besBackend, authAndTLSOptions);
@@ -59,7 +66,7 @@ public class BazelBuildEventServiceModule
       config = newConfig;
       client =
           new BuildEventServiceGrpcClient(
-              newGrpcChannel(besOptions, authAndTLSOptions),
+              newGrpcChannel(besOptions, authAndTLSOptions, remoteOptions),
               GoogleAuthUtils.newCallCredentials(authAndTLSOptions));
     }
     return client;
@@ -68,9 +75,18 @@ public class BazelBuildEventServiceModule
   // newGrpcChannel is only defined so it can be overridden in tests to not use a real network link.
   @VisibleForTesting
   protected ManagedChannel newGrpcChannel(
-      BuildEventServiceOptions besOptions, AuthAndTLSOptions authAndTLSOptions) throws IOException {
+      BuildEventServiceOptions besOptions, 
+      AuthAndTLSOptions authAndTLSOptions, 
+      RemoteOptions remoteOptions) throws IOException {
+    List<ClientInterceptor> interceptors = new ArrayList<>();
+    if (remoteOptions != null) {
+      interceptors.add(TracingMetadataUtils.newBESHeadersInterceptor(remoteOptions));
+    }
     return GoogleAuthUtils.newChannel(
-        besOptions.besBackend, besOptions.besProxy, authAndTLSOptions, /* interceptors= */ null);
+        besOptions.besBackend,
+        besOptions.besProxy, 
+        authAndTLSOptions,
+        interceptors);
   }
 
   @Override
