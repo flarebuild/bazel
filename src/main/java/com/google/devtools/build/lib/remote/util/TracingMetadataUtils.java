@@ -115,6 +115,11 @@ public class TracingMetadataUtils {
     return MetadataUtils.newAttachHeadersInterceptor(metadata);
   }
 
+  public static ClientInterceptor newBESHeadersInterceptor(RemoteOptions options) {
+    Metadata metadata = newMetadataForHeaders(options.remoteHeaders);
+    return MetadataUtils.newAttachHeadersInterceptor(metadata);
+  }
+
   public static ClientInterceptor newExecHeadersInterceptor(RemoteOptions options) {
     Metadata metadata = newMetadataForHeaders(options.remoteHeaders);
     metadata.merge(newMetadataForHeaders(options.remoteExecHeaders));

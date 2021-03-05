@@ -52,6 +52,7 @@ import com.google.devtools.build.lib.network.ConnectivityStatus.Status;
 import com.google.devtools.build.lib.network.ConnectivityStatusProvider;
 import com.google.devtools.build.lib.profiler.AutoProfiler;
 import com.google.devtools.build.lib.profiler.GoogleAutoProfilerUtils;
+import com.google.devtools.build.lib.remote.options.RemoteOptions;
 import com.google.devtools.build.lib.runtime.BlazeModule;
 import com.google.devtools.build.lib.runtime.BuildEventArtifactUploaderFactory;
 import com.google.devtools.build.lib.runtime.BuildEventStreamer;
@@ -104,6 +105,7 @@ public abstract class BuildEventServiceModule<BESOptionsT extends BuildEventServ
 
   private BuildEventProtocolOptions bepOptions;
   private AuthAndTLSOptions authTlsOptions;
+  private RemoteOptions remoteOptions;
   private BuildEventStreamOptions besStreamOptions;
   private boolean isRunsPerTestOverTheLimit;
   private BuildEventArtifactUploaderFactory uploaderFactoryToCleanup;
@@ -174,6 +176,7 @@ public abstract class BuildEventServiceModule<BESOptionsT extends BuildEventServ
         optionsClass(),
         AuthAndTLSOptions.class,
         BuildEventStreamOptions.class,
+        RemoteOptions.class,
         BuildEventProtocolOptions.class);
   }
 
@@ -302,6 +305,7 @@ public abstract class BuildEventServiceModule<BESOptionsT extends BuildEventServ
         Preconditions.checkNotNull(parsingResult.getOptions(BuildEventProtocolOptions.class));
     this.authTlsOptions =
         Preconditions.checkNotNull(parsingResult.getOptions(AuthAndTLSOptions.class));
+    this.remoteOptions = parsingResult.getOptions(RemoteOptions.class);
     this.besStreamOptions =
         Preconditions.checkNotNull(parsingResult.getOptions(BuildEventStreamOptions.class));
     this.isRunsPerTestOverTheLimit =
@@ -676,7 +680,7 @@ public abstract class BuildEventServiceModule<BESOptionsT extends BuildEventServ
 
     final BuildEventServiceClient besClient;
     try {
-      besClient = getBesClient(besOptions, authTlsOptions);
+      besClient = getBesClient(besOptions, authTlsOptions, remoteOptions);
     } catch (IOException | OptionsParsingException e) {
       reportError(
           reporter,
@@ -821,7 +825,7 @@ public abstract class BuildEventServiceModule<BESOptionsT extends BuildEventServ
   protected abstract Class<BESOptionsT> optionsClass();
 
   protected abstract BuildEventServiceClient getBesClient(
-      BESOptionsT besOptions, AuthAndTLSOptions authAndTLSOptions)
+      BESOptionsT besOptions, AuthAndTLSOptions authAndTLSOptions, RemoteOptions remoteOptions)
       throws IOException, OptionsParsingException;
 
   protected abstract void clearBesClient();
